@@ -30,8 +30,10 @@ struct ColoredPointWithNormal : cl::RPoint3D {
 
 class VCCSMetric {
 public:
-    explicit VCCSMetric(double resolution)
-        : resolution_(resolution) {}
+    explicit VCCSMetric(double resolution, double spatial_importance = 0.4, double normal_importance = 1)
+        : resolution_(resolution) , spatial_importance_(spatial_importance), normal_importance_(normal_importance) 
+        
+        {}
 
     double operator() (const ColoredPointWithNormal& p1,
                        const ColoredPointWithNormal& p2) const {
@@ -41,11 +43,13 @@ public:
         // 0.4 * lab_dist(l1, l2) / m2;
         // py::print(p1.rgb.r, p1.rgb.b, p1.rgb.g, l1.l, l1.a, l1.b);
         return 1.0 - std::fabs(p1.normal * p2.normal) +
-               cl::geometry::Distance(p1, p2) / resolution_ * 0.4;
+               cl::geometry::Distance(p1, p2) *  normal_importance_/ resolution_ * spatial_importance_;
     }
 
 private:
     double resolution_;
+    double spatial_importance_;
+    double normal_importance_;
 };
 
 cl::Array<cl::RGB32Color> random_colors(cl::Array<cl::RPoint3D>& points, cl::Array<int> labels, int n_supervoxels) {
@@ -63,7 +67,7 @@ cl::Array<cl::RGB32Color> random_colors(cl::Array<cl::RPoint3D>& points, cl::Arr
 }
 
 py::array py_segment(py::array_t<double, py::array::c_style | py::array::forcecast>& array,
-                      const float resolution)
+                      const float resolution,const float spatial_importance,const float normal_importance)
 {
   // check input dimensions
   if ( array.ndim()     != 2 )
@@ -187,7 +191,7 @@ py::array py_segment(py::array_t<double, py::array::c_style | py::array::forceca
 }
 
 py::array py_segment_knn(py::array_t<double, py::array::c_style | py::array::forcecast>& array,
-  const float resolution)
+  const float resolution,const float spatial_importance,const float normal_importance)
 {
 // check input dimensions
 if ( array.ndim()     != 2 )
@@ -236,7 +240,7 @@ for (int i = 0; i < N; ++i) {
 
 }
 //kdtree.SwapPoints(&points);
-VCCSKNNSupervoxel vccs_knn(kdtree, resolution);
+VCCSKNNSupervoxel vccs_knn(kdtree, resolution,spatial_importance,normal_importance);
 //py::print("Calling supervoxel segmentation");
 cl::Array<int> labels;
 cl::Array<VCCSKNNSupervoxel::Supervoxel> supervoxels;
@@ -285,7 +289,7 @@ strides                                  /* strides for each axis     */
 }
 
 py::array py_segment_vccs(py::array_t<double, py::array::c_style | py::array::forcecast>& array,
-  const float resolution,const float voxel_resolution)
+  const float resolution,const float voxel_resolution,const float spatial_importance,const float normal_importance)
 {
 // check input dimensions
 if ( array.ndim()     != 2 )
@@ -325,41 +329,17 @@ kdtree.FindKNearestNeighbors(kdtree.points()[i], k_neighbors,
   for (int k = 0; k < k_neighbors; ++k) {
 neighbor_points[k] = kdtree.points()[neighbors[i][k]];}
 
-// we just use normals from scannet
 
-//cl::geometry::point_cloud::PCAEstimateNormal(neighbor_points.begin(),
-//                                neighbor_points.end(),
-//                                &normals[i]);
-//
 }
 kdtree.SwapPoints(&points);
-//cl::Array<ColoredPointWithNormal> oriented_points(N);
-//for (int i = 0; i < N; i++) {
-//  // copy XYZ data into RPoints
-//  oriented_points[i].x = pos.data()[i * W + 0];
-//  oriented_points[i].y = pos.data()[i * W + 1];
-//  oriented_points[i].z = pos.data()[i * W + 2];
-//  RGB rgb{};
-//  rgb.r = pos.data()[i * W + 3];
-//  rgb.g = pos.data()[i * W + 4];
-//  rgb.b = pos.data()[i * W + 5];
-//  oriented_points[i].rgb = rgb;
-//  cl::RVector3D normal{};
-//  normal.x = pos.data()[i * W + 6];
-//  normal.y = pos.data()[i * W + 7];
-//  normal.z = pos.data()[i * W + 8];
-//  //normal.x = normals[i].x;
-//  //normal.y = normals[i].y;
-//  //normal.z = normals[i].z;
-//  oriented_points[i].normal = normal;
-//}
-//py::print("Calling supervoxel segmentation");
-
 cl::Array<int> labels;
 cl::Array<VCCSSupervoxel::Supervoxel> supervoxels;
 VCCSSupervoxel vccs(points.begin(), points.end(),
                     voxel_resolution,
-                    resolution);
+                    resolution,
+                    spatial_importance,
+                    normal_importance
+                  );
 vccs.Segment(&labels, &supervoxels);
 
 // call pure C++ function

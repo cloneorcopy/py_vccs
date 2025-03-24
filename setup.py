@@ -12,11 +12,12 @@ ext_modules = [
 
 setup(
     name="vccs_supervoxel",
-    version="0.1",
-    author="Your Name",
-    author_email="your.email@example.com",
+    version="0.2",
+    author="Yuyang You",
+    author_email="2665504699@qq.com",
     description="Pybind11 wrapper for VCCS supervoxel segmentation",
     ext_modules=ext_modules,
     cmdclass={"build_ext": build_ext},
     zip_safe=False,
 )
+#python setup.py bdist_wheel

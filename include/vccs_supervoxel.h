@@ -60,11 +60,14 @@ public:
      */
     template <typename Iterator>
     VCCSSupervoxel(Iterator first, Iterator last, double resolution,
-                   double seed_resolution)
+                   double seed_resolution,
+                   double spatial_importance = 0.4, 
+                   double normal_importance=1.0
+                )
         : resolution_(resolution),
           seed_resolution_(seed_resolution),
-          spatial_importance_(0.4),
-          normal_importance_(1.0) {
+          spatial_importance_(spatial_importance),
+          normal_importance_(normal_importance) {
         assert(resolution_ > 0.0);
         assert(seed_resolution_ >= 2.0 * resolution_);
 
